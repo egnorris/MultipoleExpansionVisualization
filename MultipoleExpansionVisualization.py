@@ -114,7 +114,7 @@ def cartesian_projection(F,params):
     return [F_x, F_y, F_z]
 
 def GetFieldComponent(params):
-    SphHarm = sp.sph_harm(params["m"],params["l"],params["theta"],params["phi"])
+    SphHarm = sp.sph_harm(params["m"],params["l"],params["phi"],params["theta"])
     #Calculate Derivatives of Spherical Harmonic, Y
     SphHarmFirstDerivPhi   = FiniteDifference(SphHarm,'phi', 1, params)
     SphHarmFirstDerivTheta  = FiniteDifference(SphHarm,'theta', 1, params)
@@ -137,26 +137,72 @@ def GetFieldComponent(params):
 
     return [ElecFieldCart, MagnFeildCart]
 
+def magnitude(z):
+  x = np.real(z)
+  y = np.imag(z)
+  return np.sqrt(x**2 + y**2)
 
+def phase(z):
+  x = np.real(z)
+  y = np.imag(z)
+  return np.arctan2(y,x)
+
+def FieldPlotting(E,H, filename):
+    E_x, E_y, E_z = E
+    H_x, H_y, H_z = H
+    E_x = np.nan_to_num(E_x); E_y = np.nan_to_num(E_y); E_z = np.nan_to_num(E_z)
+    H_x = np.nan_to_num(H_x); H_y = np.nan_to_num(H_y); H_z = np.nan_to_num(H_z)
+    m = np.max([magnitude(E_x), magnitude(E_y), magnitude(E_z), magnitude(H_x), magnitude(H_y), magnitude(H_z)])
+    
+    fig, ax = plt.subplots(2,6,figsize=(60,10))
+    plt.set_cmap(plt.get_cmap('inferno'))
+    ax[0, 0].set_title("E_x Magnitude"); ax[0, 0].set_ylabel("θ"); ax[0, 0].get_xaxis().set_visible(False)
+    ax[0, 1].set_title("H_x Magnitude"); ax[0, 1].get_xaxis().set_visible(False); ax[0, 1].get_yaxis().set_visible(False)
+    ax[0, 2].set_title("E_y Magnitude"); ax[0, 2].get_xaxis().set_visible(False); ax[0, 2].get_yaxis().set_visible(False)
+    ax[0, 3].set_title("H_y Magnitude"); ax[0, 3].get_xaxis().set_visible(False); ax[0, 3].get_yaxis().set_visible(False)
+    ax[0, 4].set_title("E_z Magnitude"); ax[0, 4].get_xaxis().set_visible(False); ax[0, 4].get_yaxis().set_visible(False)
+    ax[0, 5].set_title("H_z Magnitude"); ax[0, 5].get_xaxis().set_visible(False); ax[0, 5].get_yaxis().set_visible(False)
+    ax[1, 0].set_title("E_x Phase"); ax[1, 0].set_xlabel("ɸ"); ax[1, 0].set_ylabel("θ")
+    ax[1, 1].set_title("H_x Phase"); ax[1, 1].get_yaxis().set_visible(False); ax[1, 1].set_xlabel("ɸ")
+    ax[1, 2].set_title("E_y Phase"); ax[1, 2].get_yaxis().set_visible(False); ax[1, 2].set_xlabel("ɸ")
+    ax[1, 3].set_title("H_y Phase"); ax[1, 3].get_yaxis().set_visible(False); ax[1, 3].set_xlabel("ɸ")
+    ax[1, 4].set_title("E_z Phase"); ax[1, 4].get_yaxis().set_visible(False); ax[1, 4].set_xlabel("ɸ")
+    ax[1, 5].set_title("H_z Phase"); ax[1, 5].get_yaxis().set_visible(False); ax[1, 5].set_xlabel("ɸ")
+    bounds = [0,2*np.pi,0,np.pi]
+    im0 = ax[0, 0].imshow(magnitude(E_x) / m,extent=bounds); im1 = ax[0, 1].imshow(magnitude(H_x) / m,extent=bounds)
+    im2 = ax[0, 2].imshow(magnitude(E_y) / m,extent=bounds); im3 = ax[0, 3].imshow(magnitude(H_y) / m,extent=bounds)
+    im4 = ax[0, 4].imshow(magnitude(E_z) / m,extent=bounds); im5 = ax[0, 5].imshow(magnitude(H_z) / m,extent=bounds)
+    plt.colorbar(im5, ax=ax[0, 5], orientation="vertical")
+    plt.set_cmap(plt.get_cmap('hsv'))
+    im0 = ax[1, 0].imshow(phase(E_x),extent=bounds); im1 = ax[1, 1].imshow(phase(H_x),extent=bounds)
+    im2 = ax[1, 2].imshow(phase(E_y),extent=bounds); im3 = ax[1, 3].imshow(phase(H_y),extent=bounds)
+    im4 = ax[1, 4].imshow(phase(E_z),extent=bounds); im5 = ax[1, 5].imshow(phase(H_z),extent=bounds)
+    im0.set_clim(-np.pi, np.pi); im1.set_clim(-np.pi, np.pi); im2.set_clim(-np.pi, np.pi)
+    im3.set_clim(-np.pi, np.pi); im4.set_clim(-np.pi, np.pi); im5.set_clim(-np.pi, np.pi)
+    plt.colorbar(im5, ax=ax[1, 5], orientation="vertical", ticks = [-3, -2, -1, 0, 1, 2, 3])
+    plt.savefig(filename, dpi = 300)
 
 
 d_theta = 0.01
 d_phi = 0.01
-theta = phi = np.arange(0,np.pi, d_theta)
+theta = np.arange(0,np.pi, d_theta)
 phi = np.arange(0,2*np.pi, d_phi)
 dims = [len(theta), len(phi)]
 PHI,THETA = np.meshgrid(phi, theta)
+wavelength = 500*10**(-9)
 params = {
     "l":1,
     "m":1,
     "phi":PHI,
     "theta":THETA,
-    "r":1,
-    "k":1,
+    "r":300*10**(-6),
+    "k":2*np.pi / wavelength,
     "step": [d_theta, d_phi],
-    "aE":1,
-    "aH":1
+    "aE":0.5,
+    "aH":0.5
 }
-GetFieldComponent(params)
+E, H = GetFieldComponent(params)
+FieldPlotting(E,H, "test.png")
+
 
 
