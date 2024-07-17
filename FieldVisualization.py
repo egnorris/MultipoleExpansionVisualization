@@ -242,6 +242,51 @@ def get_multipole_term(field_type, component, model):
 
     return spectra, labels, shapes, predictions
 
+def GetFieldSubplot(Field, FigShape, Location, Label, Axes = [False, False]):
+    ax = plt.subplot2grid(shape = FigShape, loc=Location, colspan=1)
+    ax.set_title(Label)
+    ax.get_xaxis().set_visible(Axes[0])
+    ax.get_yaxis().set_visible(Axes[1])
+    ax.set_ylabel("θ")
+    ax.set_xlabel("ɸ")
+    ax.imshow(Field,extent=[0,2*np.pi,0,np.pi])
+    return ax
+
+
+def PlotComponent(Component, Wavelengths, Label, Color, WavelengthIDX, MarkerLabel):
+    wl = round(Wavelengths[WavelengthIDX] * 1E9)
+    ax = plt.plot(Wavelengths * 1E9, Component, label=Label, color=Color, linewidth = 2)
+    if MarkerLabel == True:
+        ax = plt.plot(Wavelengths[WavelengthIDX] * 1E9, Component[WavelengthIDX], '.', color = "black", markersize = 10, label = "λ: {} nm".format(wl))
+        
+    else:
+        ax = plt.plot(Wavelengths[WavelengthIDX] * 1E9, Component[WavelengthIDX], '.', color = "black", markersize = 10)
+    return ax
+
+def GetComponentSubplot(Component, Wavelengths, WavelengthIDX, FigShape, Location):
+    ax = plt.subplot2grid(shape = FigShape, loc=Location, colspan=2)
+    ax.plot()
+    ax.set_xlabel("λ [nm]")
+    ax = PlotComponent(Component[0], Wavelengths, '$aE_{1}^{1}$ SIM', "darkred", WavelengthIDX, False)
+    ax = PlotComponent(Component[3], Wavelengths, '$aE_{1}^{1}$ CNN', "red", WavelengthIDX, False)
+    ax = PlotComponent(Component[1], Wavelengths, '$aE_{2}^{1}$ SIM', "navy", WavelengthIDX, False)
+    ax = PlotComponent(Component[4], Wavelengths, '$aE_{2}^{1}$ CNN', "cornflowerblue", WavelengthIDX, False)
+    ax = PlotComponent(Component[2], Wavelengths, '$aE_{2}^{2}$ SIM', "darkgreen", WavelengthIDX, False)
+    ax = PlotComponent(Component[5], Wavelengths, '$aE_{2}^{2}$ CNN', "springgreen", WavelengthIDX, True)
+    
+    plt.legend()    
+    return ax
+
+def GetShapeSubplot(Shape, FigShape, Location):
+    ax = plt.subplot2grid(shape = FigShape, loc=Location, colspan=1)
+    ax.imshow(Shape)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    return ax
+
+
+
+
 
 electric_l1_m1_component, wavelengths, profiles, predicted_electric_l1_m1_component = get_multipole_term("electric", "l1_m1", "/media/work/evan/deep_learning_data/trained_models/electric_dipole_1000epoch")
 electric_l2_m1_component, _, _, predicted_electric_l2_m1_component   = get_multipole_term("electric", "l2_m1", "/media/work/evan/deep_learning_data/trained_models/electric_quadl2m1_1000epoch")
@@ -249,3 +294,139 @@ electric_l2_m2_component, _, _, predicted_electric_l2_m2_component   = get_multi
 magnetic_l1_m1_component, _, _, predicted_magnetic_l1_m1_component   = get_multipole_term("magnetic", "l1_m1", "/media/work/evan/deep_learning_data/trained_models/magnetic_dipole_1000epoch")
 magnetic_l2_m1_component, _, _, predicted_magnetic_l2_m1_component  = get_multipole_term("magnetic", "l2_m1", "/media/work/evan/deep_learning_data/trained_models/magnetic_quadl2m1_1000epoch")
 magnetic_l2_m2_component, _, _, predicted_magnetic_l2_m2_component  = get_multipole_term("magnetic", "l2_m2", "/media/work/evan/deep_learning_data/trained_models/magnetic_quadl2m2_1000epoch")
+
+wavelengths = wavelengths[0]
+ShapeIDX = 2
+WavelengthIDX = 50
+
+aE = [electric_l1_m1_component[ShapeIDX, WavelengthIDX],
+        electric_l2_m1_component[ShapeIDX, WavelengthIDX],
+        electric_l2_m2_component[ShapeIDX, WavelengthIDX]]
+
+
+aH = [magnetic_l1_m1_component[ShapeIDX, WavelengthIDX],
+        magnetic_l2_m1_component[ShapeIDX, WavelengthIDX],
+        magnetic_l2_m2_component[ShapeIDX, WavelengthIDX]]
+        
+dTheta = 0.01
+dPhi = 0.01 
+
+E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
+SimEx, SimEy, SimEz = E
+SimHx, SimHy, SimHz = H
+
+
+aE = [predicted_electric_l1_m1_component[ShapeIDX, WavelengthIDX],
+        predicted_electric_l2_m1_component[ShapeIDX, WavelengthIDX],
+        predicted_electric_l2_m2_component[ShapeIDX, WavelengthIDX]]
+
+
+aH = [predicted_magnetic_l1_m1_component[ShapeIDX, WavelengthIDX],
+        predicted_magnetic_l2_m1_component[ShapeIDX, WavelengthIDX],
+        predicted_magnetic_l2_m2_component[ShapeIDX, WavelengthIDX]]
+        
+dTheta = 0.01
+dPhi = 0.01 
+
+E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
+CnnEx, CnnEy, CnnEz = E
+CnnHx, CnnHy, CnnHz = H
+
+
+aEfig = [electric_l1_m1_component[ShapeIDX, :],
+        electric_l2_m1_component[ShapeIDX, :],
+        electric_l2_m2_component[ShapeIDX, :],
+        predicted_electric_l1_m1_component[ShapeIDX, :],
+        predicted_electric_l2_m1_component[ShapeIDX, :],
+        predicted_electric_l2_m2_component[ShapeIDX, :]]
+
+aHfig = [magnetic_l1_m1_component[ShapeIDX, :],
+        magnetic_l2_m1_component[ShapeIDX, :],
+        magnetic_l2_m2_component[ShapeIDX, :],
+        predicted_magnetic_l1_m1_component[ShapeIDX, :],
+        predicted_magnetic_l2_m1_component[ShapeIDX, :],
+        predicted_magnetic_l2_m2_component[ShapeIDX, :]]
+
+
+import matplotlib
+font = {'family' : 'sans serif',
+        'weight' : 'bold',
+        'size'   : 20}
+
+Representation = "Phase"
+FieldType = "Electric"
+FigSize = [15, 30]
+
+def PlotField(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wavelengths, WavelengthIDX):
+    FigShape = (3,3)
+    if Representation == "Magnitude":
+        plt.set_cmap(plt.get_cmap('inferno'))
+        enclosure = ["|", "|"]
+        for i in range(6):
+            Field[i] = magnitude(Field[i])
+
+    elif Representation == "Phase":
+        plt.set_cmap(plt.get_cmap('hsv'))
+        enclosure = ["arg(", ")"]
+        for i in range(6):
+            Field[i] = phase(Field[i])
+
+    SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz = Field
+
+    fig = plt.figure()
+    fig.set_figheight(FigSize[0])
+    fig.set_figwidth(FigSize[1])
+    fig.suptitle(f"Comparison of Predicted and Simulated Multipole Components in {FieldType} Far-Field Generation", fontsize=24)
+    ax1 = GetFieldSubplot(SimEx, FigShape, (0,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} SIM", Axes = [False, True])
+    ax2 = GetFieldSubplot(SimEy, FigShape, (0,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} SIM")
+    ax3 = GetFieldSubplot(SimEz, FigShape, (0,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} SIM")
+    ax4 = GetFieldSubplot(CnnEx, FigShape, (1,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} CNN", Axes = [True, True])
+    ax5 = GetFieldSubplot(CnnEy, FigShape, (1,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} CNN", Axes = [True, False])
+    ax6 = GetFieldSubplot(CnnEz, FigShape, (1,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} CNN", Axes = [True, False])
+    ax7 = GetComponentSubplot(Components, Wavelengths, WavelengthIDX, FigShape, (2,0))
+    plt.set_cmap(plt.get_cmap('inferno'))
+    ax8 = GetShapeSubplot(profiles[ShapeIDX], FigShape, (2,2))
+    plt.savefig(f"Electric{Representation}-Shape{ShapeIDX}-Wavelength{round(Wavelengths[WavelengthIDX])*1E9}.png")
+    plt.close()
+
+
+
+PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+    Components = aEfig,
+    FieldType = "Electric",
+    Representation = "Phase",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX
+    )
+
+PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+    Components = aEfig,
+    FieldType = "Electric",
+    Representation = "Magnitude",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX
+    )
+
+PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
+    Components = aEfig,
+    FieldType = "Magnetic",
+    Representation = "Phase",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX
+    )
+
+PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
+    Components = aEfig,
+    FieldType = "Magnetic",
+    Representation = "Magnitude",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX
+    )
