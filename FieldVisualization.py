@@ -243,8 +243,7 @@ def get_multipole_term(field_type, component, model):
     spectra = load_testing_data("y_labels", "{}_{}".format(field_type, component))
     spectra = spectra ** 0.25
     labels = load_testing_data("X_info", "{}_{}".format(field_type, component))
-    #predictions = generate_predictions(shapes,model_path)
-    predictions = spectra
+    predictions = generate_predictions(shapes,model_path)
 
     return spectra, labels, shapes, predictions
 
@@ -336,164 +335,114 @@ magnetic_l2_m1_component, _, _, predicted_magnetic_l2_m1_component  = get_multip
 magnetic_l2_m2_component, _, _, predicted_magnetic_l2_m2_component  = get_multipole_term("magnetic", "l2_m2", "/media/work/evan/deep_learning_data/trained_models/magnetic_quadl2m2_1000epoch")
 
 wavelengths = wavelengths[0]
-ShapeIDX = 2
-WavelengthIDX = 50
+for ShapeIDX in range(len(profiles)):
+    for WavelengthIDX in range(0, 101, 5):
 
-aE = [electric_l1_m1_component[ShapeIDX, WavelengthIDX],
-        electric_l2_m1_component[ShapeIDX, WavelengthIDX],
-        electric_l2_m2_component[ShapeIDX, WavelengthIDX]]
-
-
-aH = [magnetic_l1_m1_component[ShapeIDX, WavelengthIDX],
-        magnetic_l2_m1_component[ShapeIDX, WavelengthIDX],
-        magnetic_l2_m2_component[ShapeIDX, WavelengthIDX]]
-        
-dTheta = 0.01
-dPhi = 0.01 
-
-E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
-SimEx, SimEy, SimEz = E
-SimHx, SimHy, SimHz = H
+        aE = [electric_l1_m1_component[ShapeIDX, WavelengthIDX],
+                electric_l2_m1_component[ShapeIDX, WavelengthIDX],
+                electric_l2_m2_component[ShapeIDX, WavelengthIDX]]
 
 
-aE = [predicted_electric_l1_m1_component[ShapeIDX, WavelengthIDX],
-        predicted_electric_l2_m1_component[ShapeIDX, WavelengthIDX],
-        predicted_electric_l2_m2_component[ShapeIDX, WavelengthIDX]]
+        aH = [magnetic_l1_m1_component[ShapeIDX, WavelengthIDX],
+                magnetic_l2_m1_component[ShapeIDX, WavelengthIDX],
+                magnetic_l2_m2_component[ShapeIDX, WavelengthIDX]]
+                
+        dTheta = 0.005
+        dPhi = 0.005 
+
+        E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
+        SimEx, SimEy, SimEz = E
+        SimHx, SimHy, SimHz = H
 
 
-aH = [predicted_magnetic_l1_m1_component[ShapeIDX, WavelengthIDX],
-        predicted_magnetic_l2_m1_component[ShapeIDX, WavelengthIDX],
-        predicted_magnetic_l2_m2_component[ShapeIDX, WavelengthIDX]]
-        
-dTheta = 0.01
-dPhi = 0.01 
-
-E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
-CnnEx, CnnEy, CnnEz = E
-CnnHx, CnnHy, CnnHz = H
+        aE = [predicted_electric_l1_m1_component[ShapeIDX, WavelengthIDX],
+                predicted_electric_l2_m1_component[ShapeIDX, WavelengthIDX],
+                predicted_electric_l2_m2_component[ShapeIDX, WavelengthIDX]]
 
 
-ElectricComponents = [electric_l1_m1_component[ShapeIDX, :],
-        electric_l2_m1_component[ShapeIDX, :],
-        electric_l2_m2_component[ShapeIDX, :],
-        predicted_electric_l1_m1_component[ShapeIDX, :],
-        predicted_electric_l2_m1_component[ShapeIDX, :],
-        predicted_electric_l2_m2_component[ShapeIDX, :]]
+        aH = [predicted_magnetic_l1_m1_component[ShapeIDX, WavelengthIDX],
+                predicted_magnetic_l2_m1_component[ShapeIDX, WavelengthIDX],
+                predicted_magnetic_l2_m2_component[ShapeIDX, WavelengthIDX]]
+                
 
-MagneticComponents = [magnetic_l1_m1_component[ShapeIDX, :],
-        magnetic_l2_m1_component[ShapeIDX, :],
-        magnetic_l2_m2_component[ShapeIDX, :],
-        predicted_magnetic_l1_m1_component[ShapeIDX, :],
-        predicted_magnetic_l2_m1_component[ShapeIDX, :],
-        predicted_magnetic_l2_m2_component[ShapeIDX, :]]
+        E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
+        CnnEx, CnnEy, CnnEz = E
+        CnnHx, CnnHy, CnnHz = H
+
+
+        ElectricComponents = [electric_l1_m1_component[ShapeIDX, :],
+                electric_l2_m1_component[ShapeIDX, :],
+                electric_l2_m2_component[ShapeIDX, :],
+                predicted_electric_l1_m1_component[ShapeIDX, :],
+                predicted_electric_l2_m1_component[ShapeIDX, :],
+                predicted_electric_l2_m2_component[ShapeIDX, :]]
+
+        MagneticComponents = [magnetic_l1_m1_component[ShapeIDX, :],
+                magnetic_l2_m1_component[ShapeIDX, :],
+                magnetic_l2_m2_component[ShapeIDX, :],
+                predicted_magnetic_l1_m1_component[ShapeIDX, :],
+                predicted_magnetic_l2_m1_component[ShapeIDX, :],
+                predicted_magnetic_l2_m2_component[ShapeIDX, :]]
 
 
 
 
-PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
-    Components = ElectricComponents,
-    FieldType = "Electric",
-    Representation = "Phase",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "/media/work/evan/MultipoleFieldImageData/",
-    FigSize = [15, 30]
-    )
+        PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+            Components = ElectricComponents,
+            FieldType = "Electric",
+            Representation = "Phase",
+            Shape = profiles,
+            ShapeIDX = ShapeIDX,
+            Wavelengths = wavelengths,
+            WavelengthIDX = WavelengthIDX,
+            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            FigSize = [15, 30]
+            )
 
-PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
-    Components = ElectricComponents,
-    FieldType = "Electric",
-    Representation = "Magnitude",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "/media/work/evan/MultipoleFieldImageData/",
-    FigSize = [15, 30]
-    )
+        PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+            Components = ElectricComponents,
+            FieldType = "Electric",
+            Representation = "Magnitude",
+            Shape = profiles,
+            ShapeIDX = ShapeIDX,
+            Wavelengths = wavelengths,
+            WavelengthIDX = WavelengthIDX,
+            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            FigSize = [15, 30]
+            )
 
-PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
-    Components = MagneticComponents,
-    FieldType = "Magnetic",
-    Representation = "Phase",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "/media/work/evan/MultipoleFieldImageData/",
-    FigSize = [15, 30]
-    )
+        PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
+            Components = MagneticComponents,
+            FieldType = "Magnetic",
+            Representation = "Phase",
+            Shape = profiles,
+            ShapeIDX = ShapeIDX,
+            Wavelengths = wavelengths,
+            WavelengthIDX = WavelengthIDX,
+            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            FigSize = [15, 30]
+            )
 
-PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
-    Components = MagneticComponents,
-    FieldType = "Magnetic",
-    Representation = "Magnitude",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "/media/work/evan/MultipoleFieldImageData/",
-    FigSize = [15, 30]
-    )
-    
-PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
-    Components = ElectricComponents,
-    FieldType = "Electric",
-    Representation = "Phase",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "/media/work/evan/MultipoleFieldImageData/",
-    FigSize = [15, 30]
-    )
-
-PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
-    Components = ElectricComponents,
-    FieldType = "Electric",
-    Representation = "Magnitude",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "images/",
-    FigSize = [15, 30]
-    )
-
-PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
-    Components = ElectricComponents,
-    FieldType = "Electric",
-    Representation = "Phase",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "images/",
-    FigSize = [15, 30]
-    )
-
-PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
-    Components = MagneticComponents,
-    FieldType = "Magnetic",
-    Representation = "Phase",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "images/",
-    FigSize = [15, 30]
-    )
-
-PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
-    Components = MagneticComponents,
-    FieldType = "Magnetic",
-    Representation = "Magnitude",
-    Shape = profiles,
-    ShapeIDX = ShapeIDX,
-    Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX,
-    SavePath = "images/",
-    FigSize = [15, 30]
-    )
+        PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
+            Components = MagneticComponents,
+            FieldType = "Magnetic",
+            Representation = "Magnitude",
+            Shape = profiles,
+            ShapeIDX = ShapeIDX,
+            Wavelengths = wavelengths,
+            WavelengthIDX = WavelengthIDX,
+            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            FigSize = [15, 30]
+            )
+            
+        PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+            Components = ElectricComponents,
+            FieldType = "Electric",
+            Representation = "Phase",
+            Shape = profiles,
+            ShapeIDX = ShapeIDX,
+            Wavelengths = wavelengths,
+            WavelengthIDX = WavelengthIDX,
+            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            FigSize = [15, 30]
+            )
