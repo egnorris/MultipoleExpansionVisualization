@@ -15,6 +15,12 @@ from tensorflow import keras
 from tensorflow.keras import models, layers
 from keras.models import Model
 
+import matplotlib
+font = {'family' : 'sans serif',
+        'weight' : 'bold',
+        'size'   : 22}
+
+matplotlib.rc('font', **font)
 def FiniteDifference(f,coord, order, params):
     N_theta, N_phi = f.shape
     result = f * 0
@@ -284,7 +290,37 @@ def GetShapeSubplot(Shape, FigShape, Location):
     ax.get_yaxis().set_visible(False)
     return ax
 
+def PlotField(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wavelengths, WavelengthIDX, SavePath, FigSize):
+    FigShape = (3,3)
+    if Representation == "Magnitude":
+        plt.set_cmap(plt.get_cmap('inferno'))
+        enclosure = ["|", "|"]
+        for i in range(6):
+            Field[i] = magnitude(Field[i])
 
+    elif Representation == "Phase":
+        plt.set_cmap(plt.get_cmap('hsv'))
+        enclosure = ["arg(", ")"]
+        for i in range(6):
+            Field[i] = phase(Field[i])
+
+    SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz = Field
+
+    fig = plt.figure()
+    fig.set_figheight(FigSize[0])
+    fig.set_figwidth(FigSize[1])
+    fig.suptitle(f"Comparison of Predicted and Simulated Multipole Components in {FieldType} Far-Field Generation", fontsize=24)
+    ax1 = GetFieldSubplot(SimEx, FigShape, (0,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} SIM", Axes = [False, True])
+    ax2 = GetFieldSubplot(SimEy, FigShape, (0,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} SIM")
+    ax3 = GetFieldSubplot(SimEz, FigShape, (0,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} SIM")
+    ax4 = GetFieldSubplot(CnnEx, FigShape, (1,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} CNN", Axes = [True, True])
+    ax5 = GetFieldSubplot(CnnEy, FigShape, (1,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} CNN", Axes = [True, False])
+    ax6 = GetFieldSubplot(CnnEz, FigShape, (1,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} CNN", Axes = [True, False])
+    ax7 = GetComponentSubplot(Components, Wavelengths, WavelengthIDX, FigShape, (2,0))
+    plt.set_cmap(plt.get_cmap('inferno'))
+    ax8 = GetShapeSubplot(profiles[ShapeIDX], FigShape, (2,2))
+    plt.savefig(f"{SavePath}{FieldType}{Representation}-Shape{ShapeIDX}-Wavelength{round(Wavelengths[WavelengthIDX]*1E9)}.png")
+    plt.close()
 
 
 
@@ -333,14 +369,14 @@ CnnEx, CnnEy, CnnEz = E
 CnnHx, CnnHy, CnnHz = H
 
 
-aEfig = [electric_l1_m1_component[ShapeIDX, :],
+ElectricComponents = [electric_l1_m1_component[ShapeIDX, :],
         electric_l2_m1_component[ShapeIDX, :],
         electric_l2_m2_component[ShapeIDX, :],
         predicted_electric_l1_m1_component[ShapeIDX, :],
         predicted_electric_l2_m1_component[ShapeIDX, :],
         predicted_electric_l2_m2_component[ShapeIDX, :]]
 
-aHfig = [magnetic_l1_m1_component[ShapeIDX, :],
+MagneticComponents = [magnetic_l1_m1_component[ShapeIDX, :],
         magnetic_l2_m1_component[ShapeIDX, :],
         magnetic_l2_m2_component[ShapeIDX, :],
         predicted_magnetic_l1_m1_component[ShapeIDX, :],
@@ -348,85 +384,112 @@ aHfig = [magnetic_l1_m1_component[ShapeIDX, :],
         predicted_magnetic_l2_m2_component[ShapeIDX, :]]
 
 
-import matplotlib
-font = {'family' : 'sans serif',
-        'weight' : 'bold',
-        'size'   : 20}
-
-Representation = "Phase"
-FieldType = "Electric"
-FigSize = [15, 30]
-
-def PlotField(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wavelengths, WavelengthIDX):
-    FigShape = (3,3)
-    if Representation == "Magnitude":
-        plt.set_cmap(plt.get_cmap('inferno'))
-        enclosure = ["|", "|"]
-        for i in range(6):
-            Field[i] = magnitude(Field[i])
-
-    elif Representation == "Phase":
-        plt.set_cmap(plt.get_cmap('hsv'))
-        enclosure = ["arg(", ")"]
-        for i in range(6):
-            Field[i] = phase(Field[i])
-
-    SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz = Field
-
-    fig = plt.figure()
-    fig.set_figheight(FigSize[0])
-    fig.set_figwidth(FigSize[1])
-    fig.suptitle(f"Comparison of Predicted and Simulated Multipole Components in {FieldType} Far-Field Generation", fontsize=24)
-    ax1 = GetFieldSubplot(SimEx, FigShape, (0,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} SIM", Axes = [False, True])
-    ax2 = GetFieldSubplot(SimEy, FigShape, (0,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} SIM")
-    ax3 = GetFieldSubplot(SimEz, FigShape, (0,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} SIM")
-    ax4 = GetFieldSubplot(CnnEx, FigShape, (1,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} CNN", Axes = [True, True])
-    ax5 = GetFieldSubplot(CnnEy, FigShape, (1,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} CNN", Axes = [True, False])
-    ax6 = GetFieldSubplot(CnnEz, FigShape, (1,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} CNN", Axes = [True, False])
-    ax7 = GetComponentSubplot(Components, Wavelengths, WavelengthIDX, FigShape, (2,0))
-    plt.set_cmap(plt.get_cmap('inferno'))
-    ax8 = GetShapeSubplot(profiles[ShapeIDX], FigShape, (2,2))
-    plt.savefig(f"Electric{Representation}-Shape{ShapeIDX}-Wavelength{round(Wavelengths[WavelengthIDX])*1E9}.png")
-    plt.close()
-
 
 
 PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
-    Components = aEfig,
+    Components = ElectricComponents,
     FieldType = "Electric",
     Representation = "Phase",
     Shape = profiles,
     ShapeIDX = ShapeIDX,
     Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "/media/work/evan/MultipoleFieldImageData/",
+    FigSize = [15, 30]
     )
 
 PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
-    Components = aEfig,
+    Components = ElectricComponents,
     FieldType = "Electric",
     Representation = "Magnitude",
     Shape = profiles,
     ShapeIDX = ShapeIDX,
     Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "/media/work/evan/MultipoleFieldImageData/",
+    FigSize = [15, 30]
     )
 
 PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
-    Components = aEfig,
+    Components = MagneticComponents,
     FieldType = "Magnetic",
     Representation = "Phase",
     Shape = profiles,
     ShapeIDX = ShapeIDX,
     Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "/media/work/evan/MultipoleFieldImageData/",
+    FigSize = [15, 30]
     )
 
 PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
-    Components = aEfig,
+    Components = MagneticComponents,
     FieldType = "Magnetic",
     Representation = "Magnitude",
     Shape = profiles,
     ShapeIDX = ShapeIDX,
     Wavelengths = wavelengths,
-    WavelengthIDX = WavelengthIDX
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "/media/work/evan/MultipoleFieldImageData/",
+    FigSize = [15, 30]
+    )
+    
+PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+    Components = ElectricComponents,
+    FieldType = "Electric",
+    Representation = "Phase",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "/media/work/evan/MultipoleFieldImageData/",
+    FigSize = [15, 30]
+    )
+
+PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+    Components = ElectricComponents,
+    FieldType = "Electric",
+    Representation = "Magnitude",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "images/",
+    FigSize = [15, 30]
+    )
+
+PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+    Components = ElectricComponents,
+    FieldType = "Electric",
+    Representation = "Phase",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "images/",
+    FigSize = [15, 30]
+    )
+
+PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
+    Components = MagneticComponents,
+    FieldType = "Magnetic",
+    Representation = "Phase",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "images/",
+    FigSize = [15, 30]
+    )
+
+PlotField(Field=[SimHx, SimHy, SimHz, CnnHx, CnnHy, CnnHz],
+    Components = MagneticComponents,
+    FieldType = "Magnetic",
+    Representation = "Magnitude",
+    Shape = profiles,
+    ShapeIDX = ShapeIDX,
+    Wavelengths = wavelengths,
+    WavelengthIDX = WavelengthIDX,
+    SavePath = "images/",
+    FigSize = [15, 30]
     )
