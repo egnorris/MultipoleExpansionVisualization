@@ -310,6 +310,8 @@ def PlotField(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wav
     fig.set_figheight(FigSize[0])
     fig.set_figwidth(FigSize[1])
     fig.suptitle(f"Comparison of Predicted and Simulated Multipole Components in {FieldType} Far-Field Generation", fontsize=24)
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
     ax1 = GetFieldSubplot(SimEx, FigShape, (0,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} SIM", Axes = [False, True])
     ax2 = GetFieldSubplot(SimEy, FigShape, (0,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} SIM")
     ax3 = GetFieldSubplot(SimEz, FigShape, (0,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} SIM")
@@ -319,7 +321,9 @@ def PlotField(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wav
     ax7 = GetComponentSubplot(Components, Wavelengths, WavelengthIDX, FigShape, (2,0))
     plt.set_cmap(plt.get_cmap('inferno'))
     ax8 = GetShapeSubplot(profiles[ShapeIDX], FigShape, (2,2))
-    plt.savefig(f"{SavePath}{FieldType}{Representation}-Shape{ShapeIDX}-Wavelength{round(Wavelengths[WavelengthIDX]*1E9)}.png")
+    if FieldType == "Hagnetic":
+        FieldType = "Magnetic"
+    plt.savefig(f"{SavePath}{FieldType}{Representation}-Shape{ShapeIDX}-{round(Wavelengths[WavelengthIDX]*1E9)}nm.png")
     plt.close()
 
 
