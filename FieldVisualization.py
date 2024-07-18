@@ -15,10 +15,12 @@ from tensorflow import keras
 from tensorflow.keras import models, layers
 from keras.models import Model
 
+import imageio
+
 import matplotlib
 font = {'family' : 'sans serif',
-        'weight' : 'bold',
-        'size'   : 22}
+        'size'   : 18}
+from matplotlib.colors import LinearSegmentedColormap
 
 matplotlib.rc('font', **font)
 def FiniteDifference(f,coord, order, params):
@@ -110,6 +112,8 @@ def GetSphericalComponent(params, SphHarmDict, FieldType, Component):
             Field = Field * (SphHarmDict["D"]["2"]["theta"] + SphHarmDict["D"]["2"]["phi"]/(np.sin(params["theta"])**2))
             Field = 1j * const * Field
             return Field
+def PercentDifference(A,B):
+    return 100*abs(A-B)/((A+B)/2)
 
 def cartesian_projection(F,params):
     PHI = params["phi"]
@@ -159,40 +163,6 @@ def phase(z):
   y = np.imag(z)
   return np.arctan2(y,x)
 
-def FieldPlotting(E,H, filename):
-    E_x, E_y, E_z = E
-    H_x, H_y, H_z = H
-    E_x = np.nan_to_num(E_x); E_y = np.nan_to_num(E_y); E_z = np.nan_to_num(E_z)
-    H_x = np.nan_to_num(H_x); H_y = np.nan_to_num(H_y); H_z = np.nan_to_num(H_z)
-    m = np.max([magnitude(E_x), magnitude(E_y), magnitude(E_z), magnitude(H_x), magnitude(H_y), magnitude(H_z)])
-    fig, ax = plt.subplots(2,6,figsize=(60,10))
-    plt.set_cmap(plt.get_cmap('inferno'))
-    ax[0, 0].set_title("E_x Magnitude"); ax[0, 0].set_ylabel("θ"); ax[0, 0].get_xaxis().set_visible(False)
-    ax[0, 1].set_title("H_x Magnitude"); ax[0, 1].get_xaxis().set_visible(False); ax[0, 1].get_yaxis().set_visible(False)
-    ax[0, 2].set_title("E_y Magnitude"); ax[0, 2].get_xaxis().set_visible(False); ax[0, 2].get_yaxis().set_visible(False)
-    ax[0, 3].set_title("H_y Magnitude"); ax[0, 3].get_xaxis().set_visible(False); ax[0, 3].get_yaxis().set_visible(False)
-    ax[0, 4].set_title("E_z Magnitude"); ax[0, 4].get_xaxis().set_visible(False); ax[0, 4].get_yaxis().set_visible(False)
-    ax[0, 5].set_title("H_z Magnitude"); ax[0, 5].get_xaxis().set_visible(False); ax[0, 5].get_yaxis().set_visible(False)
-    ax[1, 0].set_title("E_x Phase"); ax[1, 0].set_xlabel("ɸ"); ax[1, 0].set_ylabel("θ")
-    ax[1, 1].set_title("H_x Phase"); ax[1, 1].get_yaxis().set_visible(False); ax[1, 1].set_xlabel("ɸ")
-    ax[1, 2].set_title("E_y Phase"); ax[1, 2].get_yaxis().set_visible(False); ax[1, 2].set_xlabel("ɸ")
-    ax[1, 3].set_title("H_y Phase"); ax[1, 3].get_yaxis().set_visible(False); ax[1, 3].set_xlabel("ɸ")
-    ax[1, 4].set_title("E_z Phase"); ax[1, 4].get_yaxis().set_visible(False); ax[1, 4].set_xlabel("ɸ")
-    ax[1, 5].set_title("H_z Phase"); ax[1, 5].get_yaxis().set_visible(False); ax[1, 5].set_xlabel("ɸ")
-    bounds = [0,2*np.pi,0,np.pi]
-    im0 = ax[0, 0].imshow(magnitude(E_x) / m,extent=bounds); im1 = ax[0, 1].imshow(magnitude(H_x) / m,extent=bounds)
-    im2 = ax[0, 2].imshow(magnitude(E_y) / m,extent=bounds); im3 = ax[0, 3].imshow(magnitude(H_y) / m,extent=bounds)
-    im4 = ax[0, 4].imshow(magnitude(E_z) / m,extent=bounds); im5 = ax[0, 5].imshow(magnitude(H_z) / m,extent=bounds)
-    plt.colorbar(im5, ax=ax[0, 5], orientation="vertical")
-    plt.set_cmap(plt.get_cmap('hsv'))
-    im0 = ax[1, 0].imshow(phase(E_x),extent=bounds); im1 = ax[1, 1].imshow(phase(H_x),extent=bounds)
-    im2 = ax[1, 2].imshow(phase(E_y),extent=bounds); im3 = ax[1, 3].imshow(phase(H_y),extent=bounds)
-    im4 = ax[1, 4].imshow(phase(E_z),extent=bounds); im5 = ax[1, 5].imshow(phase(H_z),extent=bounds)
-    im0.set_clim(-np.pi, np.pi); im1.set_clim(-np.pi, np.pi); im2.set_clim(-np.pi, np.pi)
-    im3.set_clim(-np.pi, np.pi); im4.set_clim(-np.pi, np.pi); im5.set_clim(-np.pi, np.pi)
-    plt.colorbar(im5, ax=ax[1, 5], orientation="vertical", ticks = [-3, -2, -1, 0, 1, 2, 3])
-    plt.savefig(filename, dpi = 300)
-    plt.close()
 
 def GetField(aE,aH, wavelength, d_theta, d_phi):
     theta = np.arange(0,np.pi, d_theta)
@@ -244,7 +214,8 @@ def get_multipole_term(field_type, component, model):
     spectra = spectra ** 0.25
     labels = load_testing_data("X_info", "{}_{}".format(field_type, component))
     predictions = generate_predictions(shapes,model_path)
-
+    #for testing formatting without the need to run predictions every time
+    #predictions = spectra
     return spectra, labels, shapes, predictions
 
 def GetFieldSubplot(Field, FigShape, Location, Label, Axes = [False, False]):
@@ -254,33 +225,45 @@ def GetFieldSubplot(Field, FigShape, Location, Label, Axes = [False, False]):
     ax.get_yaxis().set_visible(Axes[1])
     ax.set_ylabel("θ")
     ax.set_xlabel("ɸ")
-    ax.imshow(Field,extent=[0,2*np.pi,0,np.pi])
+    p = ax.imshow(Field,extent=[0,2*np.pi,0,np.pi])
+    return ax
+def GetErrorSubplot(Field, FigShape, Location, Label, Axes = [False, False]):
+    cmap = LinearSegmentedColormap.from_list("", ["blue","red"], N = 2)
+    ax = plt.subplot2grid(shape = FigShape, loc=Location, colspan=1)
+    ax.set_title(Label)
+    ax.get_xaxis().set_visible(Axes[0])
+    ax.get_yaxis().set_visible(Axes[1])
+    ax.set_ylabel("θ")
+    ax.set_xlabel("ɸ")
+    p = ax.imshow(Field,extent=[0,2*np.pi,0,np.pi], cmap = cmap)
+    p.set_clim(0,1)
     return ax
 
 
 def PlotComponent(Component, Wavelengths, Label, Color, WavelengthIDX, MarkerLabel):
     wl = round(Wavelengths[WavelengthIDX] * 1E9)
-    ax = plt.plot(Wavelengths * 1E9, Component, label=Label, color=Color, linewidth = 2)
+    ax = plt.plot(Wavelengths * 1E9, Component, label=Label, color=Color, linewidth = 3)
     if MarkerLabel == True:
-        ax = plt.plot(Wavelengths[WavelengthIDX] * 1E9, Component[WavelengthIDX], '.', color = "black", markersize = 10, label = "λ: {} nm".format(wl))
+        ax = plt.plot(Wavelengths[WavelengthIDX] * 1E9, Component[WavelengthIDX], '.', color = "black", markersize = 20, label = "λ: {} nm".format(wl))
         
     else:
-        ax = plt.plot(Wavelengths[WavelengthIDX] * 1E9, Component[WavelengthIDX], '.', color = "black", markersize = 10)
+        ax = plt.plot(Wavelengths[WavelengthIDX] * 1E9, Component[WavelengthIDX], '.', color = "black", markersize = 20)
     return ax
 
-def GetComponentSubplot(Component, Wavelengths, WavelengthIDX, FigShape, Location):
+def GetComponentSubplot(Component, Wavelengths, WavelengthIDX, FigShape, Location, FieldType):
     ax = plt.subplot2grid(shape = FigShape, loc=Location, colspan=2)
     ax.plot()
     ax.set_xlabel("λ [nm]")
-    ax = PlotComponent(Component[0], Wavelengths, '$aE_{1}^{1}$ SIM', "darkred", WavelengthIDX, False)
-    ax = PlotComponent(Component[3], Wavelengths, '$aE_{1}^{1}$ CNN', "red", WavelengthIDX, False)
-    ax = PlotComponent(Component[1], Wavelengths, '$aE_{2}^{1}$ SIM', "navy", WavelengthIDX, False)
-    ax = PlotComponent(Component[4], Wavelengths, '$aE_{2}^{1}$ CNN', "cornflowerblue", WavelengthIDX, False)
-    ax = PlotComponent(Component[2], Wavelengths, '$aE_{2}^{2}$ SIM', "darkgreen", WavelengthIDX, False)
-    ax = PlotComponent(Component[5], Wavelengths, '$aE_{2}^{2}$ CNN', "springgreen", WavelengthIDX, True)
+    ax = PlotComponent(Component[0], Wavelengths, f"$a_{{1,1}}^{FieldType[0]}$ SIM", "darkred", WavelengthIDX, False)
+    ax = PlotComponent(Component[3], Wavelengths, f"$a_{{1,1}}^{FieldType[0]}$ CNN", "red", WavelengthIDX, False)
+    ax = PlotComponent(Component[1], Wavelengths, f"$a_{{2,1}}^{FieldType[0]}$ SIM", "navy", WavelengthIDX, False)
+    ax = PlotComponent(Component[4], Wavelengths, f"$a_{{2,1}}^{FieldType[0]}$ CNN", "cornflowerblue", WavelengthIDX, False)
+    ax = PlotComponent(Component[2], Wavelengths, f"$a_{{2,2}}^{FieldType[0]}$ SIM", "darkgreen", WavelengthIDX, False)
+    ax = PlotComponent(Component[5], Wavelengths, f"$a_{{2,2}}^{FieldType[0]}$ CNN", "springgreen", WavelengthIDX, True)
     
     plt.legend()    
     return ax
+
 
 def GetShapeSubplot(Shape, FigShape, Location):
     ax = plt.subplot2grid(shape = FigShape, loc=Location, colspan=1)
@@ -311,20 +294,53 @@ def PlotField(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wav
     fig.suptitle(f"Comparison of Predicted and Simulated Multipole Components in {FieldType} Far-Field Generation", fontsize=24)
     if FieldType == "Magnetic":
         FieldType = "Hagnetic"
-    ax1 = GetFieldSubplot(SimEx, FigShape, (0,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} SIM", Axes = [False, True])
-    ax2 = GetFieldSubplot(SimEy, FigShape, (0,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} SIM")
-    ax3 = GetFieldSubplot(SimEz, FigShape, (0,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} SIM")
-    ax4 = GetFieldSubplot(CnnEx, FigShape, (1,0), f"{enclosure[0]}$a{FieldType[0]}_{1}^{1}${enclosure[1]} CNN", Axes = [True, True])
-    ax5 = GetFieldSubplot(CnnEy, FigShape, (1,1), f"{enclosure[0]}$a{FieldType[0]}_{2}^{1}${enclosure[1]} CNN", Axes = [True, False])
-    ax6 = GetFieldSubplot(CnnEz, FigShape, (1,2), f"{enclosure[0]}$a{FieldType[0]}_{2}^{2}${enclosure[1]} CNN", Axes = [True, False])
-    ax7 = GetComponentSubplot(Components, Wavelengths, WavelengthIDX, FigShape, (2,0))
+    ax1 = GetFieldSubplot(SimEx, FigShape, (0,0), f"{enclosure[0]}${FieldType[0]}_{{x}}${enclosure[1]} SIM", Axes = [False, True])
+    ax2 = GetFieldSubplot(SimEy, FigShape, (0,1), f"{enclosure[0]}${FieldType[0]}_{{y}}${enclosure[1]} SIM")
+    ax3 = GetFieldSubplot(SimEz, FigShape, (0,2), f"{enclosure[0]}${FieldType[0]}_{{z}}${enclosure[1]} SIM")
+    ax4 = GetFieldSubplot(CnnEx, FigShape, (1,0), f"{enclosure[0]}${FieldType[0]}_{{x}}${enclosure[1]} CNN", Axes = [True, True])
+    ax5 = GetFieldSubplot(CnnEy, FigShape, (1,1), f"{enclosure[0]}${FieldType[0]}_{{y}}${enclosure[1]} CNN", Axes = [True, False])
+    ax6 = GetFieldSubplot(CnnEz, FigShape, (1,2), f"{enclosure[0]}${FieldType[0]}_{{z}}${enclosure[1]} CNN", Axes = [True, False])
+    ax7 = GetComponentSubplot(Components, Wavelengths, WavelengthIDX, FigShape, (2,0), FieldType)
     plt.set_cmap(plt.get_cmap('inferno'))
     ax8 = GetShapeSubplot(profiles[ShapeIDX], FigShape, (2,2))
     if FieldType == "Hagnetic":
         FieldType = "Magnetic"
-    plt.savefig(f"{SavePath}{FieldType}{Representation}-Shape{ShapeIDX}-{round(Wavelengths[WavelengthIDX]*1E9)}nm.png")
+    plt.savefig(f"{SavePath}{FieldType}{Representation}-{round(Wavelengths[WavelengthIDX]*1E9)}nm.png")
     plt.close()
 
+def makemovie(FieldType, PlotType, ShapeIDX, WavelengthRange=[300, 805, 5]):
+    with imageio.get_writer(f"/media/work/evan/MultipoleFieldImageData/movie/{FieldType}{PlotType}-Shape{ShapeIDX}.gif", mode='I') as writer:
+        for i in np.arange(WavelengthRange[0],WavelengthRange[1],WavelengthRange[2]):
+            image = imageio.imread(f"/media/work/evan/MultipoleFieldImageData/temp/{FieldType}{PlotType}-{i}nm.png")
+            writer.append_data(image)
+
+def PlotError(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wavelengths, WavelengthIDX, SavePath, FigSize):
+    FigShape = (3,3)
+
+    SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz = Field
+
+    
+
+    fig = plt.figure()
+    fig.set_figheight(FigSize[0])
+    fig.set_figwidth(FigSize[1])
+    fig.suptitle(f"Pixel Difference Between FDTD and CNN Prediction for {FieldType} Far-Field", fontsize=24)
+    if FieldType == "Magnetic":
+        FieldType = "Hagnetic"
+    ax1 = GetErrorSubplot(PercentDifference(magnitude(SimEx),magnitude(CnnEx)), FigShape, (0,0), f"Magnitude ${FieldType[0]}_{{x}}$ Difference")
+    ax2 = GetErrorSubplot(PercentDifference(magnitude(SimEy),magnitude(CnnEy)), FigShape, (0,1), f"Magnitude ${FieldType[0]}_{{y}}$ Difference")
+    ax3 = GetErrorSubplot(PercentDifference(magnitude(SimEz),magnitude(CnnEz)), FigShape, (0,2), f"Magnitude ${FieldType[0]}_{{z}}$ Difference")
+    ax4 = GetErrorSubplot(PercentDifference(phase(SimEx),phase(CnnEx)), FigShape, (1,0), f"Phase ${FieldType[0]}_{{x}}$ Difference")
+    ax5 = GetErrorSubplot(PercentDifference(phase(SimEy),phase(CnnEy)), FigShape, (1,1), f"Phase ${FieldType[0]}_{{y}}$ Difference")
+    ax6 = GetErrorSubplot(PercentDifference(phase(SimEz),phase(CnnEz)), FigShape, (1,2), f"Phase ${FieldType[0]}_{{z}}$ Difference")
+    plt.set_cmap(plt.get_cmap('inferno'))
+    ax7 = GetComponentSubplot(Components, Wavelengths, WavelengthIDX, FigShape, (2,0), FieldType)
+    ax8 = GetShapeSubplot(profiles[ShapeIDX], FigShape, (2,2))
+    if FieldType == "Hagnetic":
+        FieldType = "Magnetic"
+    plt.savefig(f"{SavePath}{FieldType}Error-{round(Wavelengths[WavelengthIDX]*1E9)}nm.png")
+    #plt.show()
+    plt.close()
 
 
 electric_l1_m1_component, wavelengths, profiles, predicted_electric_l1_m1_component = get_multipole_term("electric", "l1_m1", "/media/work/evan/deep_learning_data/trained_models/electric_dipole_1000epoch")
@@ -335,8 +351,11 @@ magnetic_l2_m1_component, _, _, predicted_magnetic_l2_m1_component  = get_multip
 magnetic_l2_m2_component, _, _, predicted_magnetic_l2_m2_component  = get_multipole_term("magnetic", "l2_m2", "/media/work/evan/deep_learning_data/trained_models/magnetic_quadl2m2_1000epoch")
 
 wavelengths = wavelengths[0]
+WavelengthRange=[300, 805, 5]
 for ShapeIDX in range(len(profiles)):
-    for WavelengthIDX in range(0, 101, 5):
+    print(f"\nCurrent Shape: {ShapeIDX}")
+    for WavelengthIDX in range(0, 101):
+        print(f"{round(wavelengths[WavelengthIDX]*1E9)} nm")
 
         aE = [electric_l1_m1_component[ShapeIDX, WavelengthIDX],
                 electric_l2_m1_component[ShapeIDX, WavelengthIDX],
@@ -347,8 +366,8 @@ for ShapeIDX in range(len(profiles)):
                 magnetic_l2_m1_component[ShapeIDX, WavelengthIDX],
                 magnetic_l2_m2_component[ShapeIDX, WavelengthIDX]]
                 
-        dTheta = 0.005
-        dPhi = 0.005 
+        dTheta = 0.05
+        dPhi = 0.05 
 
         E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
         SimEx, SimEy, SimEz = E
@@ -395,7 +414,7 @@ for ShapeIDX in range(len(profiles)):
             ShapeIDX = ShapeIDX,
             Wavelengths = wavelengths,
             WavelengthIDX = WavelengthIDX,
-            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            SavePath = "/media/work/evan/MultipoleFieldImageData/temp/",
             FigSize = [15, 30]
             )
 
@@ -407,7 +426,7 @@ for ShapeIDX in range(len(profiles)):
             ShapeIDX = ShapeIDX,
             Wavelengths = wavelengths,
             WavelengthIDX = WavelengthIDX,
-            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            SavePath = "/media/work/evan/MultipoleFieldImageData/temp/",
             FigSize = [15, 30]
             )
 
@@ -419,7 +438,7 @@ for ShapeIDX in range(len(profiles)):
             ShapeIDX = ShapeIDX,
             Wavelengths = wavelengths,
             WavelengthIDX = WavelengthIDX,
-            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            SavePath = "/media/work/evan/MultipoleFieldImageData/temp/",
             FigSize = [15, 30]
             )
 
@@ -431,11 +450,11 @@ for ShapeIDX in range(len(profiles)):
             ShapeIDX = ShapeIDX,
             Wavelengths = wavelengths,
             WavelengthIDX = WavelengthIDX,
-            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            SavePath = "/media/work/evan/MultipoleFieldImageData/temp/",
             FigSize = [15, 30]
             )
             
-        PlotField(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+        PlotError(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
             Components = ElectricComponents,
             FieldType = "Electric",
             Representation = "Phase",
@@ -443,6 +462,44 @@ for ShapeIDX in range(len(profiles)):
             ShapeIDX = ShapeIDX,
             Wavelengths = wavelengths,
             WavelengthIDX = WavelengthIDX,
-            SavePath = "/media/work/evan/MultipoleFieldImageData/",
+            SavePath = "/media/work/evan/MultipoleFieldImageData/temp/",
             FigSize = [15, 30]
             )
+        PlotError(Field=[SimEx, SimEy, SimEz, CnnEx, CnnEy, CnnEz],
+            Components = MagneticComponents,
+            FieldType = "Magnetic",
+            Representation = "Phase",
+            Shape = profiles,
+            ShapeIDX = ShapeIDX,
+            Wavelengths = wavelengths,
+            WavelengthIDX = WavelengthIDX,
+            SavePath = "/media/work/evan/MultipoleFieldImageData/temp/",
+            FigSize = [15, 30]
+            )
+    print("Electric Error Movie")
+    makemovie("Electric", "Error", ShapeIDX)
+    print("Electric Phase Movie")
+    makemovie("Electric", "Phase", ShapeIDX)
+    print("Electric Magnitude Movie")
+    makemovie("Electric", "Magnitude", ShapeIDX)
+    print("Magnetic Error Movie")
+    makemovie("Magnetic", "Error", ShapeIDX)
+    print("Magnetic Phase Movie")
+    makemovie("Magnetic", "Phase", ShapeIDX)
+    print("Magnetic Magnitude Movie")
+    makemovie("Magnetic", "Magnitude", ShapeIDX)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
