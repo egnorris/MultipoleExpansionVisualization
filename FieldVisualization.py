@@ -15,7 +15,7 @@ from tensorflow import keras
 from tensorflow.keras import models, layers
 from keras.models import Model
 
-import imageio
+import imageio.v2 as imagio
 
 import matplotlib
 font = {'family' : 'sans serif',
@@ -113,7 +113,7 @@ def GetSphericalComponent(params, SphHarmDict, FieldType, Component):
             Field = 1j * const * Field
             return Field
 def PercentDifference(A,B):
-    return 100*abs(A-B)/((A+B)/2)
+        return 100*abs(A-B)/((A+B)/2)
 
 def cartesian_projection(F,params):
     PHI = params["phi"]
@@ -228,15 +228,15 @@ def GetFieldSubplot(Field, FigShape, Location, Label, Axes = [False, False]):
     p = ax.imshow(Field,extent=[0,2*np.pi,0,np.pi])
     return ax
 def GetErrorSubplot(Field, FigShape, Location, Label, Axes = [False, False]):
-    cmap = LinearSegmentedColormap.from_list("", ["blue","red"], N = 2)
+    #cmap = LinearSegmentedColormap.from_list("", ["blue","red"], N = 2)
     ax = plt.subplot2grid(shape = FigShape, loc=Location, colspan=1)
     ax.set_title(Label)
     ax.get_xaxis().set_visible(Axes[0])
     ax.get_yaxis().set_visible(Axes[1])
     ax.set_ylabel("θ")
     ax.set_xlabel("ɸ")
-    p = ax.imshow(Field,extent=[0,2*np.pi,0,np.pi], cmap = cmap)
-    p.set_clim(0,1)
+    p = ax.imshow(Field,extent=[0,2*np.pi,0,np.pi], cmap = "binary")
+    p.set_clim(0,100)
     return ax
 
 
@@ -308,10 +308,11 @@ def PlotField(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wav
     plt.savefig(f"{SavePath}{FieldType}{Representation}-{round(Wavelengths[WavelengthIDX]*1E9)}nm.png")
     plt.close()
 
-def makemovie(FieldType, PlotType, ShapeIDX, WavelengthRange=[300, 805, 5]):
+def makemovie(FieldType, PlotType, ShapeIDX, Wavelengths, WavelengthRange=[0, 101, 1]):
     with imageio.get_writer(f"/media/work/evan/MultipoleFieldImageData/movie/{FieldType}{PlotType}-Shape{ShapeIDX}.gif", mode='I') as writer:
         for i in np.arange(WavelengthRange[0],WavelengthRange[1],WavelengthRange[2]):
-            image = imageio.imread(f"/media/work/evan/MultipoleFieldImageData/temp/{FieldType}{PlotType}-{i}nm.png")
+            wl = round(Wavelengths[i]*1E9)
+            image = imageio.imread(f"/media/work/evan/MultipoleFieldImageData/temp/{FieldType}{PlotType}-{wl}nm.png")
             writer.append_data(image)
 
 def PlotError(Field, Components, FieldType, Representation, Shape, ShapeIDX, Wavelengths, WavelengthIDX, SavePath, FigSize):
@@ -351,10 +352,10 @@ magnetic_l2_m1_component, _, _, predicted_magnetic_l2_m1_component  = get_multip
 magnetic_l2_m2_component, _, _, predicted_magnetic_l2_m2_component  = get_multipole_term("magnetic", "l2_m2", "/media/work/evan/deep_learning_data/trained_models/magnetic_quadl2m2_1000epoch")
 
 wavelengths = wavelengths[0]
-WavelengthRange=[300, 805, 5]
+WavelengthRange=[0, 101, 5]
 for ShapeIDX in range(len(profiles)):
     print(f"\nCurrent Shape: {ShapeIDX}")
-    for WavelengthIDX in range(0, 101):
+    for WavelengthIDX in np.arange(WavelengthRange[0],WavelengthRange[1],WavelengthRange[2]):
         print(f"{round(wavelengths[WavelengthIDX]*1E9)} nm")
 
         aE = [electric_l1_m1_component[ShapeIDX, WavelengthIDX],
@@ -368,7 +369,6 @@ for ShapeIDX in range(len(profiles)):
                 
         dTheta = 0.05
         dPhi = 0.05 
-
         E, H = GetField(aE,aH, wavelengths[WavelengthIDX], dTheta, dPhi)
         SimEx, SimEy, SimEz = E
         SimHx, SimHy, SimHz = H
@@ -477,17 +477,17 @@ for ShapeIDX in range(len(profiles)):
             FigSize = [15, 30]
             )
     print("Electric Error Movie")
-    makemovie("Electric", "Error", ShapeIDX)
+    makemovie("Electric", "Error", ShapeIDX, wavelengths, WavelengthRange)
     print("Electric Phase Movie")
-    makemovie("Electric", "Phase", ShapeIDX)
+    makemovie("Electric", "Phase", ShapeIDX, wavelengths, WavelengthRange)
     print("Electric Magnitude Movie")
-    makemovie("Electric", "Magnitude", ShapeIDX)
+    makemovie("Electric", "Magnitude", ShapeIDX, wavelengths, WavelengthRange)
     print("Magnetic Error Movie")
-    makemovie("Magnetic", "Error", ShapeIDX)
+    makemovie("Magnetic", "Error", ShapeIDX, wavelengths, WavelengthRange)
     print("Magnetic Phase Movie")
-    makemovie("Magnetic", "Phase", ShapeIDX)
+    makemovie("Magnetic", "Phase", ShapeIDX, wavelengths, WavelengthRange)
     print("Magnetic Magnitude Movie")
-    makemovie("Magnetic", "Magnitude", ShapeIDX)
+    makemovie("Magnetic", "Magnitude", ShapeIDX, wavelengths, WavelengthRange)
 
 
 
